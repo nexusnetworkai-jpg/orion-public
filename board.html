@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orion — Venture Portfolio Board</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --orange: #f0883e;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --cyan: #39d353;
+    --col-w: 280px;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 13px;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  header .subtitle {
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  header .badge {
+    margin-left: auto;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .last-updated {
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 8px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .board {
+    display: flex;
+    gap: 12px;
+    padding: 16px 24px 32px;
+    overflow-x: auto;
+    min-height: calc(100vh - 90px);
+  }
+  .column {
+    flex: 0 0 var(--col-w);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 110px);
+    position: sticky;
+    top: 0;
+  }
+  .col-header {
+    padding: 12px 12px 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    border-radius: var(--radius) var(--radius) 0 0;
+    z-index: 1;
+  }
+  .col-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .col-title { font-weight: 600; font-size: 13px; }
+  .col-count {
+    margin-left: auto;
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .col-cards {
+    padding: 8px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .col-cards::-webkit-scrollbar { width: 4px; }
+  .col-cards::-webkit-scrollbar-track { background: transparent; }
+  .col-cards::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 11px;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent)22;
+  }
+  .card-stripe {
+    position: absolute;
+    left: 0; top: 6px; bottom: 6px;
+    width: 3px;
+    border-radius: 2px;
+  }
+  .card-title {
+    font-weight: 600;
+    font-size: 13px;
+    line-height: 1.4;
+    margin-bottom: 5px;
+    padding-left: 10px;
+  }
+  .card-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    padding-left: 10px;
+    margin-bottom: 8px;
+  }
+  .card-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding-left: 10px;
+    margin-top: 4px;
+  }
+  .tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .tag-green  { background: #238636; color: #3fb950; }
+  .tag-blue   { background: #1f3a5f; color: #58a6ff; }
+  .tag-yellow { background: #3d2f00; color: #d29922; }
+  .tag-red    { background: #4d1c1c; color: #f85149; }
+  .tag-purple { background: #2d1f4e; color: #bc8cff; }
+  .tag-gray   { background: #21262d; color: #8b949e; border: 1px solid var(--border); }
+  .tag-orange { background: #3d2200; color: #f0883e; }
+  .metric {
+    font-size: 11px;
+    color: var(--text-muted);
+    padding-left: 10px;
+    margin-top: 2px;
+  }
+  .metric strong { color: var(--green); }
+  .metric .blocked { color: var(--red); }
+  .metric .gate { color: var(--yellow); }
+
+  /* column color dots */
+  .dot-gray   { background: #8b949e; }
+  .dot-yellow { background: #d29922; }
+  .dot-blue   { background: #58a6ff; }
+  .dot-green  { background: #3fb950; }
+  .dot-cyan   { background: #39d353; }
+  .dot-red    { background: #f85149; }
+
+  /* modal */
+  .modal-bg {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    width: 480px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 24px;
+  }
+  .modal h2 { font-size: 16px; margin-bottom: 8px; }
+  .modal p  { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 12px; }
+  .modal .close-btn {
+    float: right; background: none; border: none;
+    color: var(--text-muted); cursor: pointer;
+    font-size: 18px; line-height: 1;
+    margin-top: -4px;
+  }
+  .modal-section { margin-top: 14px; }
+  .modal-section h3 { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .checklist { list-style: none; }
+  .checklist li { font-size: 13px; color: var(--text); padding: 3px 0; display: flex; gap: 8px; align-items: flex-start; }
+  .checklist li::before { content: '☐'; color: var(--text-muted); flex-shrink: 0; }
+  .checklist li.done::before { content: '✓'; color: var(--green); }
+
+  footer {
+    text-align: center;
+    padding: 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🌀 Orion — Venture Portfolio</h1>
+    <div class="subtitle">CASH-FIRST phase · Target: €10,000/mo · Current: €0 MRR</div>
+  </div>
+  <div class="badge">Weekly review: Sunday 09:00</div>
+</header>
+<div class="last-updated">Last updated: 2026-07-19 &nbsp;·&nbsp; Phase: CASH-FIRST &nbsp;·&nbsp; Treasury: €60.00 &nbsp;·&nbsp; Active experiments: 6</div>
+
+<div class="board">
+
+  <!-- HYPOTHESIS -->
+  <div class="column">
+    <div class="col-header">
+      <div class="col-dot dot-gray"></div>
+      <span class="col-title">Hypothesis</span>
+      <span class="col-count">2</span>
+    </div>
+    <div class="col-cards">
+
+      <div class="card" onclick="openModal('restaurant-content')">
+        <div class="card-stripe" style="background:#d29922"></div>
+        <div class="card-title">Restaurant Social Content Pack</div>
+        <div class="card-desc">Recurring $99-149/mo social content vs $995/mo agency — AI-generated, monthly subscription</div>
+        <div class="metric">Exp: <strong>exp_mrr93mdn01</strong> · Conf: 30%</div>
+        <div class="card-footer">
+          <span class="tag tag-yellow">CASH-FIRST</span>
+          <span class="tag tag-gray">Niche expedition</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="openModal('hausverwaltungen')">
+        <div class="card-stripe" style="background:#8b949e"></div>
+        <div class="card-title">Hausverwaltungen Kit</div>
+        <div class="card-desc">Rental-turnover kit for German property managers — digital product on Gumroad</div>
+        <div class="metric">Exp: <strong>exp_mrnz8tej01</strong> · Conf: 30%</div>
+        <div class="card-footer">
+          <span class="tag tag-yellow">CASH-FIRST</span>
+          <span class="tag tag-gray">DE market</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- VALIDATING -->
+  <div class="column">
+    <div class="col-header">
+      <div class="col-dot dot-yellow"></div>
+      <span class="col-title">Validating</span>
+      <span class="col-count">3</span>
+    </div>
+    <div class="col-cards">
+
+      <div class="card" onclick="openModal('rams')">
+        <div class="card-stripe" style="background:#f0883e"></div>
+        <div class="card-title">RAMS AI-Arbitrage (UK)</div>
+        <div class="card-desc">UK construction RAMS docs: £29-49/report AI-generated vs £195-445 consultant. Validated demand.</div>
+        <div class="metric">Exp: <strong>exp_mrr1738t01</strong> · Conf: 45%</div>
+        <div class="card-footer">
+          <span class="tag tag-orange">HIGH PRIORITY</span>
+          <span class="tag tag-gray">Distribution risk</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="openModal('sellerledger')">
+        <div class="card-stripe" style="background:#bc8cff"></div>
+        <div class="card-title">SellerLedger — Gumroad Kit</div>
+        <div class="card-desc">Google Sheets bookkeeping kit for Gumroad sellers at $17. Simple digital product.</div>
+        <div class="metric">Exp: <strong>exp_mrm6mz9r01</strong> · Conf: 30%</div>
+        <div class="card-footer">
+          <span class="tag tag-purple">Gumroad</span>
+          <span class="tag tag-red">GATE: Aaron payout</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="openModal('permitpulse')">
+        <div class="card-stripe" style="background:#58a6ff"></div>
+        <div class="card-title">PermitPulse</div>
+        <div class="card-desc">Construction permit leads from Socrata. GitHub Pages landing: email+ZIP → mailto. No backend until 3+ signups.</div>
+        <div class="metric">Signups: <strong>0</strong> · Gate: 3 signups to unlock backend</div>
+        <div class="card-footer">
+          <span class="tag tag-blue">Live MVP</span>
+          <span class="tag tag-gray">Waiting signups</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BUILDING -->
+  <div class="column">
+    <div class="col-header">
+      <div class="col-dot dot-blue"></div>
+      <span class="col-title">Building</span>
+      <span class="col-count">2</span>
+    </div>
+    <div class="col-cards">
+
+      <div class="card" onclick="openModal('polymarket')">
+        <div class="card-stripe" style="background:#39d353"></div>
+        <div class="card-title">Polymarket Bot (Paper)</div>
+        <div class="card-desc">Favorites-harvest 90-97c strategy. Edge-gated — paper only until Edge-Lab shows real EDGE.</div>
+        <div class="metric">WR: <strong>100% (15W/0L)</strong> · PnL: <strong>$4.51</strong> · n=15 INCONCLUSIVE</div>
+        <div class="card-footer">
+          <span class="tag tag-green">Paper only</span>
+          <span class="tag tag-gray">Epoch 2</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="openModal('memecoin')">
+        <div class="card-stripe" style="background:#bc8cff"></div>
+        <div class="card-title">Memecoin Bot (Paper)</div>
+        <div class="card-desc">Copy-trade Alpha-Engine repeat-winner wallets. Exit WITH smart wallet, trailing stop. Edge-gated.</div>
+        <div class="metric">WR: <strong>0% (0W/0L)</strong> · Cash: 10◎/10◎ · n=0 INCONCLUSIVE</div>
+        <div class="card-footer">
+          <span class="tag tag-purple">Paper only</span>
+          <span class="tag tag-gray">Epoch 2</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LIVE -->
+  <div class="column">
+    <div class="col-header">
+      <div class="col-dot dot-green"></div>
+      <span class="col-title">Live</span>
+      <span class="col-count">5</span>
+    </div>
+    <div class="col-cards">
+
+      <div class="card" onclick="openModal('realestate-tours')">
+        <div class="card-stripe" style="background:#3fb950"></div>
+        <div class="card-title">Real Estate Tour Videos</div>
+        <div class="card-desc">ffmpeg AI tour video pipeline. GitHub Pages landing + Stripe $89/$199 LIVE. Follow-up due today.</div>
+        <div class="metric">Revenue: <strong>€0</strong> · Blocker: <span class="gate">Aaron postal (CAN-SPAM)</span></div>
+        <div class="card-footer">
+          <span class="tag tag-green">Stripe LIVE</span>
+          <span class="tag tag-orange">LEAD BET</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="openModal('renoshot')">
+        <div class="card-stripe" style="background:#3fb950"></div>
+        <div class="card-title">RenoShot</div>
+        <div class="card-desc">AI renovation previews $99/$149. Site + Stripe LIVE on GitHub Pages. Cold outreach gated on postal address + Impressum PII.</div>
+        <div class="metric">Revenue: <strong>€0</strong> · Blocker: <span class="gate">Aaron postal address</span></div>
+        <div class="card-footer">
+          <span class="tag tag-green">Stripe LIVE</span>
+          <span class="tag tag-red">Outreach HELD</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="openModal('str-stack')">
+        <div class="card-stripe" style="background:#58a6ff"></div>
+        <div class="card-title">STR Stack Affiliate</div>
+        <div class="card-desc">12 GitHub Pages ($0 cost). AirDNA 30% recurring + Guesty $100/customer commissions LIVE.</div>
+        <div class="metric">Revenue: <strong>€0</strong> · Follow-up: <span class="gate">due today</span></div>
+        <div class="card-footer">
+          <span class="tag tag-blue">Affiliate</span>
+          <span class="tag tag-gray">GitHub Pages</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="openModal('content-engine')">
+        <div class="card-stripe" style="background:#d29922"></div>
+        <div class="card-title">Content Engine (Orion)</div>
+        <div class="card-desc">Faceless content + build-in-public hub. Dev.to post #1 LIVE (id 4161014). YouTube gated on OAuth.</div>
+        <div class="metric">Target: <strong>€24/30d</strong> · Gumroad $24 kit: <span class="gate">payout gate</span></div>
+        <div class="card-footer">
+          <span class="tag tag-yellow">Content</span>
+          <span class="tag tag-blue">Dev.to live</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="openModal('strmetrics')">
+        <div class="card-stripe" style="background:#8b949e"></div>
+        <div class="card-title">STRmetrics</div>
+        <div class="card-desc">STR market intelligence API. Stripe self-serve LIVE ($29/$99/$299/mo). Railway may be suspended.</div>
+        <div class="metric">Funnel: 862 views · 10 buy-clicks · <strong>0 sales</strong></div>
+        <div class="card-footer">
+          <span class="tag tag-gray">Anchor venture</span>
+          <span class="tag tag-red">Railway dead</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SCALING -->
+  <div class="column">
+    <div class="col-header">
+      <div class="col-dot dot-cyan"></div>
+      <span class="col-title">Scaling</span>
+      <span class="col-count">0</span>
+    </div>
+    <div class="col-cards">
+      <div style="text-align:center; padding: 32px 12px; color: var(--text-muted); font-size: 12px;">
+        First €100/month<br>unlocks this column.
+      </div>
+    </div>
+  </div>
+
+  <!-- KILLED -->
+  <div class="column">
+    <div class="col-header">
+      <div class="col-dot dot-red"></div>
+      <span class="col-title">Killed</span>
+      <span class="col-count">5</span>
+    </div>
+    <div class="col-cards">
+
+      <div class="card">
+        <div class="card-stripe" style="background:#f85149"></div>
+        <div class="card-title">Generic Arbitrage Tool</div>
+        <div class="card-desc">Sports-betting = taboo; Amazon-FBA = physical+saturated. Killed exp_mropuobn01.</div>
+        <div class="card-footer"><span class="tag tag-red">KILLED</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-stripe" style="background:#f85149"></div>
+        <div class="card-title">SEO Agency Automation</div>
+        <div class="card-desc">Saturated, zero data edge, off-ICP. Killed exp_mrmdto7u01.</div>
+        <div class="card-footer"><span class="tag tag-red">KILLED</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-stripe" style="background:#f85149"></div>
+        <div class="card-title">AI Code Debugging Service</div>
+        <div class="card-desc">Incumbents (Cursor/Copilot) own the buyer; needs private codebase. Killed exp_mrnxq47y01.</div>
+        <div class="card-footer"><span class="tag tag-red">KILLED</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-stripe" style="background:#f85149"></div>
+        <div class="card-title">Auto-Report Gig (Fiverr)</div>
+        <div class="card-desc">Fiverr bans full-auto fulfillment; breaks Aaron-never-delivers rule.</div>
+        <div class="card-footer"><span class="tag tag-red">KILLED</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-stripe" style="background:#f85149"></div>
+        <div class="card-title">AI Economic Forecasting</div>
+        <div class="card-desc">Finance/investor ideas fail SEO/self-serve; focus elsewhere.</div>
+        <div class="card-footer"><span class="tag tag-red">KILLED</span></div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /board -->
+
+<!-- MODALS -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<footer>Orion Operator · CASH-FIRST · Weekly review: every Sunday 09:00 · Board updated 2026-07-19</footer>
+
+<script>
+const cards = {
+  'restaurant-content': {
+    title: 'Restaurant Social Content Pack',
+    desc: 'Recurring social content subscription for restaurants and cafés at $99-149/mo vs $995/mo agency. AI-generated from brief + brand assets. Monthly auto-delivery.',
+    checklist: [
+      { text: 'Validate: post in 3 restaurant owner FB groups, gauge interest', done: false },
+      { text: 'Build sample pack (5 posts + 2 Stories for a mock café)', done: false },
+      { text: 'Set up Gumroad or Stripe for $99/mo subscription', done: false },
+      { text: 'Find 3 paying customers before building automation', done: false },
+    ],
+    tags: ['CASH-FIRST', 'Niche', 'Recurring'],
+    metric: 'Confidence: 30% · Budget: $0 (validate free first)'
+  },
+  'hausverwaltungen': {
+    title: 'Hausverwaltungen Rental-Turnover Kit',
+    desc: 'Digital product kit for German property managers (Hausverwaltungen): checklists, templates, and automation guides for rental turnover. Gumroad €17-29.',
+    checklist: [
+      { text: 'Research: find top 5 pain-points in German PM forums', done: false },
+      { text: 'Build kit: 5 Word/PDF templates + automation guide', done: false },
+      { text: 'List on Gumroad (Aaron payout gate first)', done: false },
+      { text: 'Post value in DE property manager groups', done: false },
+    ],
+    tags: ['Digital Product', 'DE market', 'Gumroad'],
+    metric: 'Confidence: 30% · Gate: Aaron Gumroad payout'
+  },
+  'rams': {
+    title: 'RAMS AI-Arbitrage (UK Construction)',
+    desc: 'Risk Assessment Method Statements for UK construction sites. Consultants charge £195-445; we deliver AI-generated RAMS at £29-49 in minutes from customer inputs. Self-delivering via form → AI → PDF delivery.',
+    checklist: [
+      { text: 'Build MVP: one-page form → GPT-4o → PDF RAMS', done: false },
+      { text: 'Create 3 sample RAMS documents to show quality', done: false },
+      { text: 'Post in UK contractor forums (CITB, FMB, tradespeople Reddit)', done: false },
+      { text: 'Set up Stripe checkout £29 one-off', done: false },
+      { text: 'Get 3 paid orders before scaling', done: false },
+    ],
+    tags: ['AI-Arbitrage', 'UK market', 'HIGH PRIORITY'],
+    metric: 'Confidence: 45% · Validated demand · Risk: distribution'
+  },
+  'sellerledger': {
+    title: 'SellerLedger — Gumroad Google Sheets Kit',
+    desc: 'Simple bookkeeping spreadsheet kit for Gumroad sellers at $17. Auto-tracks sales, fees, net income. One-time purchase, instant digital delivery.',
+    checklist: [
+      { text: 'Build kit: Google Sheets template with 6 months formulas', done: false },
+      { text: 'GATE: Aaron Gumroad payout setup', done: false },
+      { text: 'List on Gumroad + post in Gumroad creator communities', done: false },
+      { text: 'Write 1 dev.to article targeting "Gumroad bookkeeping"', done: false },
+    ],
+    tags: ['Gumroad', 'Digital Product'],
+    metric: 'Confidence: 30% · BLOCKED: Aaron payout'
+  },
+  'permitpulse': {
+    title: 'PermitPulse',
+    desc: 'Construction permit lead alerts from public Socrata data. GitHub Pages landing with email+ZIP → mailto capture. No backend until 3 real signups confirm demand.',
+    checklist: [
+      { text: 'Landing page LIVE on GitHub Pages', done: true },
+      { text: 'Socrata permit data pull working', done: true },
+      { text: 'Get 3 real email signups', done: false },
+      { text: 'Build backend email delivery (only after 3 signups)', done: false },
+    ],
+    tags: ['Live MVP', 'Data product'],
+    metric: 'Signups: 0/3 · Gate: 3 signups to build backend'
+  },
+  'polymarket': {
+    title: 'Polymarket Bot — Epoch 2',
+    desc: 'Favorites-harvest strategy: buy YES on high-probability (90-97c) markets. Break-even needs ~95% hit rate. Edge-gated — no live capital until Edge-Lab confirms real edge.',
+    checklist: [
+      { text: 'Epoch 2 hypothesis: favorites-harvest 90-97c', done: true },
+      { text: 'Collect 30+ resolved trades (n=15 so far)', done: false },
+      { text: 'Run edge_lab.py when n≥30', done: false },
+      { text: 'GATE: Edge-Lab EDGE verdict before live capital', done: false },
+    ],
+    tags: ['Paper only', 'Prediction markets'],
+    metric: 'WR: 100% (15W/0L) · PnL: $4.51 · Status: INCONCLUSIVE (n<30)'
+  },
+  'memecoin': {
+    title: 'Memecoin Bot — Epoch 2',
+    desc: 'True copy-trade of Alpha-Engine repeat-winner wallets via Helius WebSocket. Exit WITH the smart wallet, trailing stop, no time-box. Edge-gated.',
+    checklist: [
+      { text: 'Helius WebSocket smart-money tracking live', done: true },
+      { text: 'Epoch 2: copy-trade watchlist wallets', done: true },
+      { text: 'Collect 30+ resolved trades (n=0 so far)', done: false },
+      { text: 'Run edge_lab.py when n≥30', done: false },
+    ],
+    tags: ['Paper only', 'Solana memes'],
+    metric: 'WR: 0% (0W/0L) · Cash: 10◎ · Status: INCONCLUSIVE (n=0)'
+  },
+  'realestate-tours': {
+    title: 'Real Estate Tour Videos',
+    desc: 'AI-generated real estate walkthrough videos from listing photos. ffmpeg pipeline. GitHub Pages landing + Stripe $89 Basic / $199 Pro LIVE.',
+    checklist: [
+      { text: 'ffmpeg video pipeline built', done: true },
+      { text: 'GitHub Pages + Stripe LIVE', done: true },
+      { text: 'Send follow-up to prospects (due today)', done: false },
+      { text: 'Add Fiverr gig (needs Aaron postal address)', done: false },
+      { text: 'Get first paying customer', done: false },
+    ],
+    tags: ['Stripe LIVE', 'LEAD BET', 'AI video'],
+    metric: 'Revenue: €0 · Blocker: Aaron postal address for CAN-SPAM footer'
+  },
+  'renoshot': {
+    title: 'RenoShot — AI Renovation Previews',
+    desc: 'Instant AI renovation renders for homeowners + contractors. $99 Standard / $149 Premium. GitHub Pages + Stripe LIVE. Cold outreach held until Aaron postal address (CAN-SPAM) + Impressum PII.',
+    checklist: [
+      { text: 'Site built on GitHub Pages', done: true },
+      { text: 'Stripe checkout LIVE', done: true },
+      { text: 'GATE: Aaron postal address for outreach', done: false },
+      { text: 'Cold email: home improvement contractors (US)', done: false },
+      { text: 'First paying customer', done: false },
+    ],
+    tags: ['Stripe LIVE', 'AI renders'],
+    metric: 'Revenue: €0 · Outreach HELD (postal address gate)'
+  },
+  'str-stack': {
+    title: 'STR Stack — Affiliate Revenue',
+    desc: '12 comparison landing pages on GitHub Pages covering the STR software stack. AirDNA 30% recurring commissions + Guesty $100/customer referral fees — both LIVE.',
+    checklist: [
+      { text: '12 GitHub Pages landing pages LIVE', done: true },
+      { text: 'AirDNA affiliate link LIVE', done: true },
+      { text: 'Guesty referral LIVE', done: true },
+      { text: 'Send follow-up wave to prospects', done: false },
+      { text: 'Add 3 more comparison pages (top STR tools)', done: false },
+    ],
+    tags: ['Affiliate', 'GitHub Pages'],
+    metric: 'Revenue: €0 · Follow-up due TODAY'
+  },
+  'content-engine': {
+    title: 'Content Engine (Orion build-in-public)',
+    desc: 'Faceless content production arm. Dev.to post #1 LIVE. YouTube Shorts pipeline built (gated on Google OAuth). Gumroad $24 AI toolkit listed (gated on Aaron payout). Public hub live at nexusnetworkai-jpg.github.io/orion-public/',
+    checklist: [
+      { text: 'Dev.to post #1 LIVE (id 4161014)', done: true },
+      { text: 'Dev.to post #2 review-PASSED', done: true },
+      { text: 'Gumroad $24 kit listed (payout gate)', done: true },
+      { text: 'YouTube channel setup (Aaron OAuth gate)', done: false },
+      { text: 'ElevenLabs affiliate signup (Aaron hCaptcha gate)', done: false },
+    ],
+    tags: ['Content', 'Dev.to', 'Affiliate'],
+    metric: 'Target: €24/30d · Gates: YouTube OAuth + Gumroad payout'
+  },
+  'strmetrics': {
+    title: 'STRmetrics — STR Market Intelligence API',
+    desc: 'Programmatic STR market data API. Stripe self-serve LIVE ($29/$99/$299/mo). 50 SEO city pages LIVE. Railway may be suspended ($33.40 unpaid). 862 views, 10 buy-clicks, 0 sales.',
+    checklist: [
+      { text: 'Core scraper + API deployed', done: true },
+      { text: 'Stripe checkout LIVE', done: true },
+      { text: '50 SEO city pages LIVE', done: true },
+      { text: 'IndexNow submitting pages', done: true },
+      { text: 'Migrate off Railway (trial dead)', done: false },
+      { text: 'Custom domain (Aaron PII gate)', done: false },
+      { text: 'First paying customer', done: false },
+    ],
+    tags: ['Anchor venture', 'API', 'Stripe LIVE'],
+    metric: '862 views · 374 pricing views · 10 buy-clicks · €0 revenue'
+  }
+};
+
+function openModal(id) {
+  const card = cards[id];
+  if (!card) return;
+  const html = `
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <h2>${card.title}</h2>
+    <p>${card.desc}</p>
+    <div class="modal-section">
+      <h3>Next Steps</h3>
+      <ul class="checklist">
+        ${card.checklist.map(i => `<li class="${i.done ? 'done' : ''}">${i.text}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="modal-section">
+      <h3>Metrics</h3>
+      <p>${card.metric}</p>
+    </div>
+    <div class="modal-section">
+      <h3>Tags</h3>
+      <div class="card-footer" style="padding-left:0">
+        ${card.tags.map(t => `<span class="tag tag-gray">${t}</span>`).join('')}
+      </div>
+    </div>
+  `;
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-bg').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+
+</body>
+</html>
